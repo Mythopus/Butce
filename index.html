@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bütçe Takip</title>
+<style>
+  :root{
+    --bg:#0b1020; --surface:#131a2e; --surface-2:#1a2238; --border:#232c45;
+    --text:#eef1f8; --text-2:#9aa3bd; --muted:#6b7490;
+    --accent:#3b6df0; --accent-2:#5b8bff;
+    --green:#2fbf71; --red:#ef5b5b; --orange:#f0a63b; --purple:#8b7bf0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:76px;}
+  .screen{display:none;padding:20px 16px 8px;}
+  .screen.active{display:block;}
+  h1.title{font-size:26px;font-weight:700;margin:4px 0 16px;}
+  .row{display:flex;justify-content:space-between;align-items:center;}
+  .cards3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
+  .stat{background:var(--surface);border-radius:12px;padding:12px 8px;text-align:center;}
+  .stat .lbl{font-size:11px;color:var(--text-2);margin-bottom:4px;}
+  .stat .val{font-size:16px;font-weight:700;}
+  .hero{background:linear-gradient(135deg,var(--accent),#6a5bf0);border-radius:16px;padding:18px;margin-bottom:16px;}
+  .hero .lbl{font-size:13px;color:#dbe2ff;}
+  .hero .val{font-size:34px;font-weight:700;margin:6px 0 14px;}
+  .hero .subrow{display:flex;gap:10px;}
+  .hero .subcard{flex:1;background:rgba(255,255,255,0.15);border-radius:10px;padding:10px 12px;}
+  .hero .subcard .lbl{font-size:12px;color:#eef1ff;}
+  .hero .subcard .val{font-size:16px;margin:2px 0 0;}
+  .iconbtn{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .mini{background:var(--surface);border-radius:12px;padding:12px 14px;}
+  .mini .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:8px;}
+  .mini .lbl{font-size:12px;color:var(--text-2);}
+  .mini .val{font-size:17px;font-weight:700;margin-top:2px;}
+  .navcard{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;}
+  .navcard .l{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;}
+  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;}
+  .card-title{font-size:15px;font-weight:700;margin-bottom:10px;}
+  .emptytxt{color:var(--muted);font-size:13px;text-align:center;padding:14px 0;}
+  button.primary{background:var(--accent);color:#fff;border:none;border-radius:11px;padding:12px;font-size:15px;font-weight:600;width:100%;cursor:pointer;}
+  button.secondary{background:var(--surface-2);color:var(--text);border:0.5px solid var(--border);border-radius:11px;padding:12px;font-size:14px;font-weight:600;width:100%;cursor:pointer;}
+  .btnrow{display:flex;gap:10px;}
+  input,select,textarea{width:100%;background:var(--surface-2);border:0.5px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:inherit;}
+  input::placeholder,textarea::placeholder{color:var(--muted);}
+  label.fl{font-size:12px;color:var(--text-2);margin-bottom:4px;display:block;}
+  .field{margin-bottom:10px;}
+  .seg{display:flex;background:var(--surface-2);border-radius:10px;padding:3px;margin-bottom:14px;overflow-x:auto;}
+  .seg button{flex:1;white-space:nowrap;background:none;border:none;color:var(--text-2);padding:8px 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+  .seg button.active{background:var(--accent);color:#fff;}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--surface-2);border:0.5px solid var(--border);font-size:13px;color:var(--text-2);cursor:pointer;margin:0 6px 6px 0;}
+  .chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .txrow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:0.5px solid var(--border);}
+  .txrow:first-child{border-top:none;}
+  .txleft{display:flex;align-items:center;gap:10px;}
+  .txic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .txname{font-size:14px;font-weight:600;}
+  .txmeta{font-size:12px;color:var(--text-2);}
+  .txamt{font-size:14px;font-weight:700;}
+  .del-x{background:none;border:none;color:var(--muted);font-size:16px;padding:4px 6px;cursor:pointer;}
+  .progress{height:7px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:6px 0;}
+  .progress .bar{height:100%;background:var(--accent);}
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;max-width:480px;width:calc(100% - 32px);z-index:5;}
+  .tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:0.5px solid var(--border);display:flex;max-width:480px;margin:0 auto;}
+  .tabbtn{flex:1;background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;font-size:11px;cursor:pointer;}
+  .tabbtn.active{color:var(--accent-2);}
+  .tabbtn svg{width:22px;height:22px;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:flex-end;justify-content:center;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--surface);border-radius:18px 18px 0 0;padding:18px 16px 24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .modal-head h3{margin:0;font-size:17px;}
+  .close-x{background:var(--surface-2);border:none;color:var(--text);width:28px;height:28px;border-radius:999px;font-size:15px;cursor:pointer;}
+  .err{color:var(--red);font-size:12px;display:none;margin-bottom:8px;}
+  .daygroup{margin-bottom:16px;}
+  .daygroup .dh{font-size:12px;color:var(--text-2);margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- GENEL BAKIŞ -->
+  <div class="screen active" id="screen-overview">
+    <div class="row" style="margin-bottom:6px;">
+      <div style="font-size:12px;color:var(--text-2);">Bu Ay</div>
+    </div>
+    <h1 class="title" style="margin-top:0;">Genel Bakış</h1>
+    <div class="hero">
+      <div class="row">
+        <div class="lbl">Toplam Bakiye</div>
+        <button class="iconbtn" onclick="openModal('tx')">+</button>
+      </div>
+      <div class="val" id="ov-balance">0 ₺</div>
+      <div class="subrow">
+        <div class="subcard"><div class="lbl">Net Kar/Zarar</div><div class="val" id="ov-net">+0 ₺</div></div>
+        <div class="subcard"><div class="lbl">Tasarruf</div><div class="val" id="ov-savings">0%</div></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="mini"><div class="ic" style="background:rgba(47,191,113,0.15);color:var(--green);">↗</div><div class="lbl">Toplam Gelir</div><div class="val" id="ov-income" style="color:var(--green);">0 ₺</div></div>
+      <div class="mini"><div class="ic" style="background:rgba(239,91,91,0.15);color:var(--red);">↘</div><div class="lbl">Toplam Gider</div><div class="val" id="ov-expense" style="color:var(--red);">0 ₺</div></div>
+    </div>
+    <div class="grid2">
+      <div class="navcard" onclick="go('reports')"><div class="l">📊 Raporlar</div><div>›</div></div>
+      <div class="navcard" onclick="go('goals')"><div class="l">🎯 Hedefler</div><div>›</div></div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="card-title">Gelir vs Gider · Bu Ay</div><div id="ov-gv" style="font-size:13px;font-weight:700;color:var(--green);">+0 ₺</div></div>
+      <div id="ov-chart"></div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" onclick="openModal('tx')">+ İşlem Ekle</button>
+      <button class="secondary" onclick="go('wallet'); switchWalletTab('bills')">Fatura Oluştur</button>
+    </div>
+  </div>
+
+  <!-- İŞLEMLER -->
+  <div class="screen" id="screen-transactions">
+    <div class="row"><h1 class="title">İşlemler</h1><button class="iconbtn" style="background:var(--accent);" onclick="openModal('tx')">+</button></div>
+    <div class="seg" id="tx-filter">
+      <button class="active" data-f="all" onclick="setTxFilter('all')">Tümü</button>
+      <button data-f="income" onclick="setTxFilter('income')">Gelir</button>
+      <button data-f="expense" onclick="setTxFilter('expense')">Gider</button>
+    </div>
+    <div id="tx-list"></div>
+  </div>
+
+  <!-- BÜTÇE -->
+  <div class="screen" id="screen-budget">
+    <div class="row"><h1 class="title">Bütçe</h1><button class="iconbtn" style="background:var(--accent);" onclick="openModal('cat')">+</button></div>
+    <div class="cards3">
+      <div class="stat"><div class="lbl">Toplam Bütçe</div><div class="val" id="b-total">0 ₺</div></div>
+      <div class="stat"><div class="lbl">Harcanan</div><div class="val" id="b-spent">0 ₺</div></div>
+      <div class="stat"><div class="lbl">Kalan</div><div class="val" id="b-left">0 ₺</div></div>
+    </div>
+    <div class="card-title" style="margin-bottom:10px;">Bütçe Kategorileri</div>
+    <div id="budget-list" style="margin-bottom:14px;"></div>
+    <button class="secondary" style="margin-bottom:10px;" onclick="openModal('cat')">+ Yeni Kategori Ekle</button>
+  </div>
+
+  <!-- CÜZDAN -->
+  <div class="screen" id="screen-wallet">
+    <h1 class="title">Cüzdan</h1>
+    <div class="seg" id="wallet-tabs">
+      <button class="active" data-w="cards" onclick="switchWalletTab('cards')">Kartlar</button>
+      <button data-w="bills" onclick="switchWalletTab('bills')">Faturalar</button>
+      <button data-w="debts" onclick="switchWalletTab('debts')">Borçlar</button>
+      <button data-w="calendar" onclick="switchWalletTab('calendar')">Takvim</button>
+    </div>
+
+    <div id="wallet-cards">
+      <div id="banks-list" style="margin-bottom:12px;"></div>
+      <button class="primary" onclick="openModal('bank')">Banka Ekle</button>
+    </div>
+
+    <div id="wallet-bills" style="display:none;">
+      <div class="cards3" style="grid-template-columns:1fr 1fr;">
+        <div class="stat"><div class="lbl">Ödenmemiş</div><div class="val" id="bills-unpaid">0 ₺</div></div>
+        <div class="stat"><div class="lbl">Gecikmiş</div><div class="val" id="bills-overdue" style="color:var(--red);">0</div></div>
+      </div>
+      <div class="card-title" style="margin:14px 0 8px;">Fatura ekle</div>
+      <div id="bill-cats" style="margin-bottom:10px;"></div>
+      <div id="bill-status-filter" style="margin-bottom:10px;">
+        <span class="chip active" data-s="all" onclick="setBillFilter('all')">Tümü</span>
+        <span class="chip" data-s="unpaid" onclick="setBillFilter('unpaid')">Ödenmedi</span>
+        <span class="chip" data-s="overdue" onclick="setBillFilter('overdue')">Gecikmiş</span>
+        <span class="chip" data-s="paid" onclick="setBillFilter('paid')">Ödendi</span>
+      </div>
+      <div id="bills-list"></div>
+    </div>
+
+    <div id="wallet-debts" style="display:none;">
+      <div class="cards3" style="grid-template-columns:1fr 1fr;">
+        <div class="stat"><div class="lbl">Verdiğim</div><div class="val" id="debt-given" style="color:var(--green);">0 ₺</div></div>
+        <div class="stat"><div class="lbl">Aldığım</div><div class="val" id="debt-taken" style="color:var(--red);">0 ₺</div></div>
+      </div>
+      <button class="primary" style="margin-bottom:14px;" onclick="openModal('debt')">Borç ekle</button>
+      <div id="debts-list"></div>
+    </div>
+
+    <div id="wallet-calendar" style="display:none;">
+      <div class="card-title" style="margin-bottom:10px;">Yaklaşan tarihli öğeler</div>
+      <div id="calendar-list"></div>
+    </div>
+  </div>
+
+  <!-- PROFİL -->
+  <div class="screen" id="screen-profile">
+    <h1 class="title">Profil</h1>
+    <div class="card">
+      <div class="field">
+        <label class="fl">İsim</label>
+        <input id="prof-name" type="text" placeholder="Adın" onchange="saveProfileName()" />
+      </div>
+      <div class="field">
+        <label class="fl">Para birimi sembolü</label>
+        <input id="prof-currency" type="text" maxlength="3" placeholder="₺" onchange="saveCurrency()" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Veri</div>
+      <button class="secondary" style="margin-bottom:8px;" onclick="exportData()">Verileri Dışa Aktar (.json)</button>
+      <button class="secondary" onclick="resetData()" style="color:var(--red);">Tüm Verileri Sıfırla</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="tabbar">
+  <button class="tabbtn active" data-screen="overview" onclick="go('overview')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+    Genel Bakış
+  </button>
+  <button class="tabbtn" data-screen="transactions" onclick="go('transactions')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>
+    İşlemler
+  </button>
+  <button class="tabbtn" data-screen="budget" onclick="go('budget')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="14" r="1.2" fill="currentColor"/></svg>
+    Bütçe
+  </button>
+  <button class="tabbtn" data-screen="wallet" onclick="go('wallet')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 12h3"/></svg>
+    Cüzdan
+  </button>
+  <button class="tabbtn" data-screen="profile" onclick="go('profile')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1.5-4 5-5.5 7-5.5S17.5 16 19 20"/></svg>
+    Profil
+  </button>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this) closeModal()">
+
+  <div class="modal" id="modal-tx" style="display:none;">
+    <div class="modal-head"><h3>Yeni İşlem</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="seg"><button class="active" id="tx-type-expense" onclick="setTxType('expense')">Gider</button><button id="tx-type-income" onclick="setTxType('income')">Gelir</button></div>
+    <div class="field"><label class="fl">Açıklama</label><input id="tx-name" type="text" placeholder="ör. Market, Maaş" /></div>
+    <div class="field"><label class="fl">Tutar</label><input id="tx-amount" type="number" step="0.01" placeholder="0" /></div>
+    <div class="field"><label class="fl">Kategori</label><select id="tx-category"></select></div>
+    <div class="field"><label class="fl">Tarih</label><input id="tx-date" type="date" /></div>
+    <div class="field"><label class="fl">Not (opsiyonel)</label><textarea id="tx-note" rows="2" placeholder="Not ekle..."></textarea></div>
+    <div class="err" id="tx-err">Lütfen açıklama, geçerli bir tutar ve tarih girin.</div>
+    <button class="primary" onclick="addTransaction()">Kaydet</button>
+  </div>
+
+  <div class="modal" id="modal-cat" style="display:none;">
+    <div class="modal-head"><h3>Yeni Bütçe Kategorisi</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="field"><label class="fl">Kategori adı</label><input id="cat-name" type="text" placeholder="ör. Market, Ulaşım" /></div>
+    <div class="field"><label class="fl">Aylık limit</label><input id="cat-limit" type="number" step="1" placeholder="0" /></div>
+    <div class="err" id="cat-err">Lütfen kategori adı ve geçerli bir limit girin.</div>
+    <button class="primary" onclick="addCategory()">Kaydet</button>
+  </div>
+
+  <div class="modal" id="modal-bank" style="display:none;">
+    <div class="modal-head"><h3>Banka Ekle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="field"><label class="fl">Banka adı</label><input id="bank-name" type="text" placeholder="ör. İş Bankası" /></div>
+    <div class="err" id="bank-err">Lütfen bir banka adı girin.</div>
+    <button class="primary" onclick="addBank()">Kaydet</button>
+  </div>
+
+  <div class="modal" id="modal-bill" style="display:none;">
+    <div class="modal-head"><h3>Fatura Ekle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="field"><label class="fl">Kategori</label>
+      <select id="bill-category">
+        <option value="Elektrik">⚡ Elektrik</option>
+        <option value="Su">💧 Su</option>
+        <option value="Doğalgaz">🔥 Doğalgaz</option>
+        <option value="İnternet">📶 İnternet</option>
+        <option value="Telefon">📞 Telefon</option>
+      </select>
+    </div>
+    <div class="field"><label class="fl">Tutar</label><input id="bill-amount" type="number" step="0.01" placeholder="0" /></div>
+    <div class="field"><label class="fl">Son ödeme tarihi</label><input id="bill-date" type="date" /></div>
+    <div class="err" id="bill-err">Lütfen geçerli bir tutar ve tarih girin.</div>
+    <button class="primary" onclick="addBill()">Kaydet</button>
+  </div>
+
+  <div class="modal" id="modal-debt" style="display:none;">
+    <div class="modal-head"><h3>Borç Ekle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="seg"><button class="active" id="debt-type-given" onclick="setDebtType('given')">Verdiğim</button><button id="debt-type-taken" onclick="setDebtType('taken')">Aldığım</button></div>
+    <div class="field"><label class="fl">Kişi</label><input id="debt-person" type="text" placeholder="İsim" /></div>
+    <div class="field"><label class="fl">Tutar</label><input id="debt-amount" type="number" step="0.01" placeholder="0" /></div>
+    <div class="field"><label class="fl">Tarih</label><input id="debt-date" type="date" /></div>
+    <div class="field"><label class="fl">Not (opsiyonel)</label><textarea id="debt-note" rows="2"></textarea></div>
+    <div class="err" id="debt-err">Lütfen kişi, geçerli bir tutar ve tarih girin.</div>
+    <button class="primary" onclick="addDebt()">Kaydet</button>
+  </div>
+
+</div>
+
+<script>
+const LS = {
+  tx:'bt_transactions', cats:'bt_categories', banks:'bt_banks', bills:'bt_bills',
+  debts:'bt_debts', profile:'bt_profile'
+};
+function load(key, def){ try{ return JSON.parse(localStorage.getItem(key)) ?? def; }catch(e){ return def; } }
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+let state = {
+  tx: load(LS.tx, []),
+  cats: load(LS.cats, []),
+  banks: load(LS.banks, []),
+  bills: load(LS.bills, []),
+  debts: load(LS.debts, []),
+  profile: load(LS.profile, {name:'', currency:'₺'})
+};
+let txFilter = 'all';
+let billFilter = 'all';
+let txTypeSel = 'expense';
+let debtTypeSel = 'given';
+let activeWalletTab = 'cards';
+
+function cur(){ return state.profile.currency || '₺'; }
+function fmt(n){ return (Math.round(n*100)/100).toLocaleString('tr-TR') + ' ' + cur(); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDate(s){ const [y,m,d]=s.split('-'); return d+'.'+m+'.'+y; }
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function uid(){ return Date.now()+'_'+Math.random().toString(36).slice(2,8); }
+function isThisMonth(dateStr){ const d=new Date(dateStr); const n=new Date(); return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear(); }
+
+/* ---------- NAVIGATION ---------- */
+function go(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.toggle('active', b.dataset.screen===screen));
+  renderAll();
+}
+function switchWalletTab(tab){
+  activeWalletTab = tab;
+  ['cards','bills','debts','calendar'].forEach(t=>{
+    document.getElementById('wallet-'+t).style.display = (t===tab)?'block':'none';
+  });
+  document.querySelectorAll('#wallet-tabs button').forEach(b=>b.classList.toggle('active', b.dataset.w===tab));
+  renderWallet();
+}
+
+/* ---------- MODALS ---------- */
+function openModal(which){
+  document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-bg').classList.add('show');
+  document.getElementById('modal-'+which).style.display='block';
+  if(which==='tx'){
+    populateTxCategories();
+    document.getElementById('tx-date').value = todayStr();
+    document.getElementById('tx-name').value=''; document.getElementById('tx-amount').value=''; document.getElementById('tx-note').value='';
+    document.getElementById('tx-err').style.display='none';
+    setTxType('expense');
+  }
+  if(which==='cat'){
+    document.getElementById('cat-name').value=''; document.getElementById('cat-limit').value='';
+    document.getElementById('cat-err').style.display='none';
+  }
+  if(which==='bank'){
+    document.getElementById('bank-name').value='';
+    document.getElementById('bank-err').style.display='none';
+  }
+  if(which==='bill'){
+    document.getElementById('bill-amount').value='';
+    document.getElementById('bill-date').value = todayStr();
+    document.getElementById('bill-err').style.display='none';
+  }
+  if(which==='debt'){
+    document.getElementById('debt-person').value=''; document.getElementById('debt-amount').value=''; document.getElementById('debt-note').value='';
+    document.getElementById('debt-date').value = todayStr();
+    document.getElementById('debt-err').style.display='none';
+    setDebtType('given');
+  }
+}
+function closeModal(){ document.getElementById('modal-bg').classList.remove('show'); }
+function setTxType(t){ txTypeSel=t; document.getElementById('tx-type-expense').classList.toggle('active', t==='expense'); document.getElementById('tx-type-income').classList.toggle('active', t==='income'); }
+function setDebtType(t){ debtTypeSel=t; document.getElementById('debt-type-given').classList.toggle('active', t==='given'); document.getElementById('debt-type-taken').classList.toggle('active', t==='taken'); }
+function populateTxCategories(){
+  const sel = document.getElementById('tx-category');
+  const opts = state.cats.length ? state.cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('') : '<option value="Genel">Genel</option>';
+  sel.innerHTML = opts + '<option value="Diğer">Diğer</option>';
+}
+
+/* ---------- ADD ACTIONS ---------- */
+function addTransaction(){
+  const name = document.getElementById('tx-name').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  const category = document.getElementById('tx-category').value;
+  const date = document.getElementById('tx-date').value;
+  const note = document.getElementById('tx-note').value.trim();
+  if(!name || isNaN(amount) || amount<=0 || !date){ document.getElementById('tx-err').style.display='block'; return; }
+  state.tx.push({id:uid(), type:txTypeSel, name, amount, category, date, note});
+  save(LS.tx, state.tx);
+  closeModal(); renderAll();
+}
+function addCategory(){
+  const name = document.getElementById('cat-name').value.trim();
+  const limit = parseFloat(document.getElementById('cat-limit').value);
+  if(!name || isNaN(limit) || limit<=0){ document.getElementById('cat-err').style.display='block'; return; }
+  state.cats.push({id:uid(), name, limit});
+  save(LS.cats, state.cats);
+  closeModal(); renderAll();
+}
+function addBank(){
+  const name = document.getElementById('bank-name').value.trim();
+  if(!name){ document.getElementById('bank-err').style.display='block'; return; }
+  state.banks.push({id:uid(), name, cards:[]});
+  save(LS.banks, state.banks);
+  closeModal(); renderWallet();
+}
+function addCardToBank(bankId){
+  const bank = state.banks.find(b=>b.id===bankId);
+  if(!bank) return;
+  bank.cards.push({id:uid()});
+  save(LS.banks, state.banks);
+  renderWallet();
+}
+let billCatSel = 'Elektrik';
+function addBill(){
+  const amount = parseFloat(document.getElementById('bill-amount').value);
+  const date = document.getElementById('bill-date').value;
+  if(isNaN(amount) || amount<=0 || !date){ document.getElementById('bill-err').style.display='block'; return; }
+  const category = document.getElementById('bill-category').value;
+  const status = (new Date(date) < new Date(todayStr())) ? 'overdue' : 'unpaid';
+  state.bills.push({id:uid(), category, amount, date, status});
+  save(LS.bills, state.bills);
+  closeModal(); renderWallet();
+}
+function addDebt(){
+  const person = document.getElementById('debt-person').value.trim();
+  const amount = parseFloat(document.getElementById('debt-amount').value);
+  const date = document.getElementById('debt-date').value;
+  const note = document.getElementById('debt-note').value.trim();
+  if(!person || isNaN(amount) || amount<=0 || !date){ document.getElementById('debt-err').style.display='block'; return; }
+  state.debts.push({id:uid(), type:debtTypeSel, person, amount, date, note});
+  save(LS.debts, state.debts);
+  closeModal(); renderWallet();
+}
+
+/* ---------- DELETE ---------- */
+function delTx(id){ state.tx = state.tx.filter(t=>t.id!==id); save(LS.tx,state.tx); renderAll(); }
+function delCat(id){ state.cats = state.cats.filter(c=>c.id!==id); save(LS.cats,state.cats); renderAll(); }
+function delBank(id){ state.banks = state.banks.filter(b=>b.id!==id); save(LS.banks,state.banks); renderWallet(); }
+function delBill(id){ state.bills = state.bills.filter(b=>b.id!==id); save(LS.bills,state.bills); renderWallet(); }
+function delDebt(id){ state.debts = state.debts.filter(d=>d.id!==id); save(LS.debts,state.debts); renderWallet(); }
+function markBillPaid(id){ const b=state.bills.find(x=>x.id===id); if(b){ b.status='paid'; save(LS.bills,state.bills); renderWallet(); } }
+
+/* ---------- FILTERS ---------- */
+function setTxFilter(f){ txFilter=f; document.querySelectorAll('#tx-filter button').forEach(b=>b.classList.toggle('active', b.dataset.f===f)); renderTransactions(); }
+function setBillFilter(f){ billFilter=f; document.querySelectorAll('#bill-status-filter .chip').forEach(c=>c.classList.toggle('active', c.dataset.s===f)); renderWallet(); }
+
+/* ---------- PROFILE ---------- */
+function saveProfileName(){ state.profile.name = document.getElementById('prof-name').value.trim(); save(LS.profile, state.profile); }
+function saveCurrency(){ const v = document.getElementById('prof-currency').value.trim(); state.profile.currency = v || '₺'; save(LS.profile, state.profile); renderAll(); }
+function exportData(){
+  const data = {tx:state.tx, cats:state.cats, banks:state.banks, bills:state.bills, debts:state.debts, profile:state.profile};
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'butce-takip-verileri.json';
+  a.click();
+}
+function resetData(){
+  if(!confirm('Tüm veriler silinecek, emin misin?')) return;
+  Object.values(LS).forEach(k=>localStorage.removeItem(k));
+  state = {tx:[], cats:[], banks:[], bills:[], debts:[], profile:{name:'', currency:'₺'}};
+  renderAll();
+}
+
+/* ---------- RENDER: OVERVIEW ---------- */
+function renderOverview(){
+  const income = state.tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = state.tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const balance = income - expense;
+  document.getElementById('ov-balance').textContent = fmt(balance);
+  document.getElementById('ov-income').textContent = fmt(income);
+  document.getElementById('ov-expense').textContent = fmt(expense);
+
+  const mIncome = state.tx.filter(t=>t.type==='income' && isThisMonth(t.date)).reduce((s,t)=>s+t.amount,0);
+  const mExpense = state.tx.filter(t=>t.type==='expense' && isThisMonth(t.date)).reduce((s,t)=>s+t.amount,0);
+  const net = mIncome - mExpense;
+  document.getElementById('ov-net').textContent = (net>=0?'+':'') + fmt(net);
+  document.getElementById('ov-savings').textContent = (mIncome>0 ? Math.round((net/mIncome)*100) : 0) + '%';
+  document.getElementById('ov-gv').textContent = (net>=0?'+':'') + fmt(net);
+  document.getElementById('ov-gv').style.color = net>=0 ? 'var(--green)' : 'var(--red)';
+
+  const chart = document.getElementById('ov-chart');
+  if(mIncome===0 && mExpense===0){
+    chart.innerHTML = '<div class="emptytxt">Grafik için işlem ekleyin</div>';
+  } else {
+    const max = Math.max(mIncome, mExpense, 1);
+    chart.innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:16px;height:110px;padding-top:10px;">
+        <div style="flex:1;text-align:center;">
+          <div style="background:var(--green);border-radius:6px 6px 0 0;height:${Math.max(6,(mIncome/max)*90)}px;"></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px;">Gelir</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+          <div style="background:var(--red);border-radius:6px 6px 0 0;height:${Math.max(6,(mExpense/max)*90)}px;"></div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px;">Gider</div>
+        </div>
+      </div>`;
+  }
+}
+
+/* ---------- RENDER: TRANSACTIONS ---------- */
+function renderTransactions(){
+  const list = document.getElementById('tx-list');
+  let items = [...state.tx].sort((a,b)=> b.date.localeCompare(a.date));
+  if(txFilter!=='all') items = items.filter(t=>t.type===txFilter);
+  if(items.length===0){ list.innerHTML = '<div class="emptytxt">Henüz işlem yok.</div>'; return; }
+  list.innerHTML = items.map(t=>`
+    <div class="txrow">
+      <div class="txleft">
+        <div class="txic" style="background:${t.type==='income'?'rgba(47,191,113,0.15)':'rgba(239,91,91,0.15)'};color:${t.type==='income'?'var(--green)':'var(--red)'};">${t.type==='income'?'↗':'↘'}</div>
+        <div>
+          <div class="txname">${esc(t.name)}</div>
+          <div class="txmeta">${esc(t.category)} · ${fmtDate(t.date)}${t.note ? ' · '+esc(t.note) : ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="txamt" style="color:${t.type==='income'?'var(--green)':'var(--red)'};">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div>
+        <button class="del-x" onclick="delTx('${t.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- RENDER: BUDGET ---------- */
+function renderBudget(){
+  const totalBudget = state.cats.reduce((s,c)=>s+c.limit,0);
+  const monthExpenses = state.tx.filter(t=>t.type==='expense' && isThisMonth(t.date));
+  const spentByCat = {};
+  monthExpenses.forEach(t=>{ spentByCat[t.category] = (spentByCat[t.category]||0) + t.amount; });
+  const totalSpent = state.cats.reduce((s,c)=> s + (spentByCat[c.name]||0), 0);
+
+  document.getElementById('b-total').textContent = fmt(totalBudget);
+  document.getElementById('b-spent').textContent = fmt(totalSpent);
+  document.getElementById('b-left').textContent = fmt(totalBudget-totalSpent);
+
+  const list = document.getElementById('budget-list');
+  if(state.cats.length===0){ list.innerHTML = '<div class="emptytxt">Henüz bütçe yok. + ile ekleyin.</div>'; return; }
+  list.innerHTML = state.cats.map(c=>{
+    const spent = spentByCat[c.name] || 0;
+    const pct = Math.min(100, (spent/c.limit)*100 || 0);
+    const over = spent > c.limit;
+    return `<div class="card" style="margin-bottom:10px;padding:12px 14px;">
+      <div class="row">
+        <div style="font-weight:600;font-size:14px;">${esc(c.name)}</div>
+        <button class="del-x" onclick="delCat('${c.id}')">✕</button>
+      </div>
+      <div class="progress"><div class="bar" style="width:${pct}%;background:${over?'var(--red)':'var(--accent)'};"></div></div>
+      <div class="row"><div style="font-size:12px;color:var(--text-2);">${fmt(spent)} harcandı</div><div style="font-size:12px;color:var(--text-2);">limit ${fmt(c.limit)}</div></div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- RENDER: WALLET ---------- */
+function renderWallet(){
+  if(activeWalletTab==='cards') renderBanks();
+  if(activeWalletTab==='bills') renderBills();
+  if(activeWalletTab==='debts') renderDebts();
+  if(activeWalletTab==='calendar') renderCalendar();
+}
+function renderBanks(){
+  const list = document.getElementById('banks-list');
+  if(state.banks.length===0){ list.innerHTML = '<div class="emptytxt">Henüz banka eklenmedi.</div>'; return; }
+  list.innerHTML = state.banks.map(b=>`
+    <div class="card" style="margin-bottom:10px;padding:14px 16px;">
+      <div class="row">
+        <div style="font-weight:700;font-size:14px;">🏦 ${esc(b.name)}</div>
+        <button class="del-x" onclick="delBank('${b.id}')">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-2);margin:6px 0 10px;">${b.cards.length>0 ? b.cards.length+' kart' : 'Bu bankada kart yok'}</div>
+      <button class="secondary" onclick="addCardToBank('${b.id}')">+ Kart Ekle</button>
+    </div>`).join('');
+}
+const billIcons = {'Elektrik':'⚡','Su':'💧','Doğalgaz':'🔥','İnternet':'📶','Telefon':'📞'};
+function renderBills(){
+  const now = new Date(todayStr());
+  state.bills.forEach(b=>{ if(b.status!=='paid' && new Date(b.date) < now) b.status='overdue'; });
+  save(LS.bills, state.bills);
+
+  const unpaidTotal = state.bills.filter(b=>b.status==='unpaid'||b.status==='overdue').reduce((s,b)=>s+b.amount,0);
+  const overdueCount = state.bills.filter(b=>b.status==='overdue').length;
+  document.getElementById('bills-unpaid').textContent = fmt(unpaidTotal);
+  document.getElementById('bills-overdue').textContent = overdueCount;
+
+  const catsDiv = document.getElementById('bill-cats');
+  catsDiv.innerHTML = Object.keys(billIcons).map(c=>`<span class="chip" onclick="openBillModal('${c}')">${billIcons[c]} ${c}</span>`).join('');
+
+  let items = [...state.bills].sort((a,b)=>a.date.localeCompare(b.date));
+  if(billFilter!=='all') items = items.filter(b=>b.status===billFilter);
+  const list = document.getElementById('bills-list');
+  if(items.length===0){ list.innerHTML = '<div class="emptytxt">Henüz fatura yok. Yukarıdan kategori seçip ekleyin.</div>'; return; }
+  const statusLabel = {unpaid:'Ödenmedi', overdue:'Gecikmiş', paid:'Ödendi'};
+  const statusColor = {unpaid:'var(--orange)', overdue:'var(--red)', paid:'var(--green)'};
+  list.innerHTML = items.map(b=>`
+    <div class="txrow">
+      <div class="txleft">
+        <div class="txic" style="background:var(--surface-2);">${billIcons[b.category]||'📄'}</div>
+        <div>
+          <div class="txname">${esc(b.category)}</div>
+          <div class="txmeta">${fmtDate(b.date)} · <span style="color:${statusColor[b.status]};">${statusLabel[b.status]}</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="txamt">${fmt(b.amount)}</div>
+        ${b.status!=='paid' ? `<button class="del-x" style="color:var(--green);" onclick="markBillPaid('${b.id}')">✓</button>` : ''}
+        <button class="del-x" onclick="delBill('${b.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+function openBillModal(cat){ billCatSel = cat; openModal('bill'); document.getElementById('bill-category').value = cat; }
+function renderDebts(){
+  const given = state.debts.filter(d=>d.type==='given').reduce((s,d)=>s+d.amount,0);
+  const taken = state.debts.filter(d=>d.type==='taken').reduce((s,d)=>s+d.amount,0);
+  document.getElementById('debt-given').textContent = fmt(given);
+  document.getElementById('debt-taken').textContent = fmt(taken);
+  const list = document.getElementById('debts-list');
+  if(state.debts.length===0){ list.innerHTML = '<div class="emptytxt">Kayıtlı borç yok. Verdiğiniz veya aldığınız borçları ekleyin.</div>'; return; }
+  const items = [...state.debts].sort((a,b)=>b.date.localeCompare(a.date));
+  list.innerHTML = items.map(d=>`
+    <div class="txrow">
+      <div class="txleft">
+        <div class="txic" style="background:${d.type==='given'?'rgba(47,191,113,0.15)':'rgba(239,91,91,0.15)'};color:${d.type==='given'?'var(--green)':'var(--red)'};">${d.type==='given'?'↗':'↘'}</div>
+        <div>
+          <div class="txname">${esc(d.person)}</div>
+          <div class="txmeta">${d.type==='given'?'Verdiğim':'Aldığım'} · ${fmtDate(d.date)}${d.note ? ' · '+esc(d.note) : ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="txamt" style="color:${d.type==='given'?'var(--green)':'var(--red)'};">${fmt(d.amount)}</div>
+        <button class="del-x" onclick="delDebt('${d.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+function renderCalendar(){
+  const events = [];
+  state.bills.filter(b=>b.status!=='paid').forEach(b=> events.push({date:b.date, label:billIcons[b.category]+' '+b.category+' faturası', amount:b.amount}));
+  state.debts.forEach(d=> events.push({date:d.date, label:(d.type==='given'?'Verdiğim: ':'Aldığım: ')+d.person, amount:d.amount}));
+  events.sort((a,b)=>a.date.localeCompare(b.date));
+  const list = document.getElementById('calendar-list');
+  if(events.length===0){ list.innerHTML='<div class="emptytxt">Yaklaşan tarihli bir öğe yok.</div>'; return; }
+  const byDate = {};
+  events.forEach(e=>{ (byDate[e.date]=byDate[e.date]||[]).push(e); });
+  list.innerHTML = Object.keys(byDate).map(date=>`
+    <div class="daygroup">
+      <div class="dh">${fmtDate(date)}</div>
+      ${byDate[date].map(e=>`<div class="txrow"><div class="txname">${esc(e.label)}</div><div class="txamt">${fmt(e.amount)}</div></div>`).join('')}
+    </div>`).join('');
+}
+
+/* ---------- RENDER ALL ---------- */
+function renderAll(){
+  renderOverview();
+  renderTransactions();
+  renderBudget();
+  renderWallet();
+  document.getElementById('prof-name').value = state.profile.name || '';
+  document.getElementById('prof-currency').value = state.profile.currency || '₺';
+}
+
+renderAll();
+</script>
+</body>
+</html>
